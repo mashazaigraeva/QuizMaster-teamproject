@@ -32,7 +32,7 @@ jobs:
         path: QuizMaster/bin/Release/net10.0/
 
     - name: Запуск NUnit тестів
-      run: dotnet test --no-build --verbosity normal --logger "trx;LogFileName=test_results.trx" --results-directory ./TestResults
+      run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test_results.trx" --results-directory ./TestResults
 
     - name: Збереження звіту про тести (Test Artifact)
       uses: actions/upload-artifact@v4
