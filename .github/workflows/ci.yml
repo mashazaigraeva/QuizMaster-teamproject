@@ -1,0 +1,42 @@
+name: QuizMaster CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest 
+
+    steps:
+    - name: Завантаження коду (Checkout)
+      uses: actions/checkout@v4
+
+    - name: Встановлення .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Відновлення залежностей (Restore)
+      run: dotnet restore
+
+    - name: Компіляція проєкту (Build)
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Збереження готового бота (Artifact)
+      uses: actions/upload-artifact@v4
+      with:
+        name: QuizMaster-Bot-Build
+        path: QuizMaster/bin/Release/net10.0/
+
+    - name: Запуск NUnit тестів
+      run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test_results.trx" --results-directory ./TestResults
+
+    - name: Збереження звіту про тести (Test Artifact)
+      uses: actions/upload-artifact@v4
+      if: always() 
+      with:
+        name: NUnit-Test-Report
+        path: ./TestResults/test_results.trx

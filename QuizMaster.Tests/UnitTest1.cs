@@ -1,15 +1,13 @@
-﻿namespace QuizMaster.Tests;
+﻿
 
-public class Tests
+public class InfrastructureTests
 {
-    [SetUp]
-    public void Setup()
-    {
-    }
-
     [Test]
-    public void Test1()
-    {
-        Assert.Pass();
+    public void CiCdPipeline_IsWorking_Correctly()
+    { 
+        int expectedValue = 2;
+        int actualValue = 2;
+
+        Assert.That(actualValue, Is.EqualTo(expectedValue));
     }
 }

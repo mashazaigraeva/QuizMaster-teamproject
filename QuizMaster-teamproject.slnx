@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="QuizMaster.Tests/QuizMaster.Tests.csproj" />
+  <Project Path="QuizMaster/QuizMaster.csproj" />
+</Solution>
