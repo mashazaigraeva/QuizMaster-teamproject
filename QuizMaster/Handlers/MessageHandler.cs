@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 
-namespace StudyBot.Handlers
+namespace QuizMaster.Handlers
 {
     public class MessageHandler
     {
