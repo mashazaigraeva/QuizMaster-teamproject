@@ -2,8 +2,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
+using Telegram.Bot.Types.Enums;
 
-namespace StudyBot.Handlers
+namespace QuizMaster.Handlers
 {
     public class MenuHandler
     {
@@ -14,13 +15,10 @@ namespace StudyBot.Handlers
         {
             var keyboard = new InlineKeyboardMarkup(new[]
             {
+                new[] { InlineKeyboardButton.WithCallbackData("Вибрати дисципліну", "menu_subjects") },
                 new[]
                 {
-                    InlineKeyboardButton.WithCallbackData("Почати тест", "menu_subjects")
-                },
-                new[]
-                {
-                    InlineKeyboardButton.WithCallbackData("Статистика", "menu_stats"),
+                    InlineKeyboardButton.WithCallbackData("Моя статистика", "menu_stats"),
                     InlineKeyboardButton.WithCallbackData("Налаштування", "menu_settings")
                 }
             });
@@ -39,15 +37,11 @@ namespace StudyBot.Handlers
         {
             var keyboard = new InlineKeyboardMarkup(new[]
             {
-                new[]
-                {
-                    InlineKeyboardButton.WithCallbackData("Математика", "subject_math"),
-                    InlineKeyboardButton.WithCallbackData("C#", "subject_csharp")
-                },
-                new[]
-                {
-                    InlineKeyboardButton.WithCallbackData("Назад", "menu_main")
-                }
+                new[] { InlineKeyboardButton.WithCallbackData("Математичний аналіз", "subject_math") },
+                new[] { InlineKeyboardButton.WithCallbackData("Основи програмування", "subject_prog_basics") },
+                new[] { InlineKeyboardButton.WithCallbackData("Комп'ютерні мережі", "subject_networks") },
+                new[] { InlineKeyboardButton.WithCallbackData("Алгоритми та структури даних", "subject_algorithms") },
+                new[] { InlineKeyboardButton.WithCallbackData("Назад", "menu_main") }
             });
 
             await botClient.SendMessage(
