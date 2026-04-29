@@ -246,7 +246,7 @@ namespace QuizMaster
                     await Handlers.MenuHandler.SendSubjectsMenuAsync(botClient, chatId, cancellationToken);
                     break;
 
-                case "menu_statistics":
+                case "menu_stats":
                     await botClient.SendMessage(chatId, "Тут буде виводитись твоя статистика успішності. (В розробці)", cancellationToken: cancellationToken);
                     break;
                 
@@ -263,7 +263,7 @@ namespace QuizMaster
                         {
                             subjectName = "Математичний аналіз";
                         }
-                        if (callbackData == "subject_programming")
+                        if (callbackData == "subject_prog_basics")
                         {
                             subjectName = "Основи програмування";
                         }
