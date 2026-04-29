@@ -89,6 +89,102 @@ namespace QuizMaster
                     }
                     await Handlers.MenuHandler.SendMainMenuAsync(botClient, message.Chat.Id, cancellationToken);
                 }
+
+
+                string messageText = update.Message.Text;
+                long chatId = update.Message.Chat.Id;
+
+                if (messageText.StartsWith("/gen "))
+                {
+                    string adminIdString = Environment.GetEnvironmentVariable("ADMIN_ID");
+                    long adminId = 0;
+
+                    if (long.TryParse(adminIdString, out adminId))
+                    {
+                        if (message.Chat.Id == adminId)
+                        {
+                            await botClient.SendMessage(message.Chat.Id, "Доступ дозволено! Починаю генерацію...", cancellationToken: cancellationToken);
+                        }
+                        else
+                        {
+                            await botClient.SendMessage(message.Chat.Id, "У вас немає прав для генерації питань.", cancellationToken: cancellationToken);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Помилка: ADMIN_ID у файлі .env не є числом або порожній!");
+                    }
+
+                    var parts = messageText.Split(' ', StringSplitOptions.RemoveEmptyEntries); 
+
+                    if (parts.Length >= 3 && int.TryParse(parts.Last(), out int count))
+                    {
+                        string subject = string.Join(" ", parts.Skip(1).Take(parts.Length - 2));
+
+                        await botClient.SendMessage(chatId, $"Gemini думає... Генерую {count} питань з '{subject}'. Це займе кілька секунд.", cancellationToken: cancellationToken);
+                        string jsonResult = null;
+
+                        try
+                        {
+                            var gemini = new Services.GeminiService();
+                            
+                            jsonResult = await gemini.GenerateQuestionsAsync(subject, count);
+
+                            if (string.IsNullOrEmpty(jsonResult))
+                            {
+                                await botClient.SendMessage(chatId, "Помилка: Gemini не повернув дані або виникла помилка з'єднання.", cancellationToken: cancellationToken);
+                                return;
+                            }
+
+                            if (jsonResult.StartsWith("```json"))
+                            {
+                                jsonResult = jsonResult.Substring(7, jsonResult.Length - 10).Trim();
+                            }
+                            else if (jsonResult.StartsWith("```"))
+                            {
+                                jsonResult = jsonResult.Substring(3, jsonResult.Length - 6).Trim();
+                            }
+
+                            using var db = new Data.AppDbContext();
+                            
+                            var subjectEntity = db.Subjects.ToList().FirstOrDefault(s => s.Name.ToLower() == subject.ToLower());
+                            if (subjectEntity == null)
+                            {
+                                subjectEntity = new Models.Subject { Name = subject };
+                                db.Subjects.Add(subjectEntity);
+                                db.SaveChanges();
+                            }
+
+                            var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                            var questions = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<Models.Question>>(jsonResult, options);
+
+                            if (questions == null || questions.Count == 0)
+                            {
+                                await botClient.SendMessage(chatId, "ШІ повернув порожній масив.", cancellationToken: cancellationToken);
+                                return;
+                            }
+
+                            foreach (var q in questions)
+                            {
+                                q.SubjectId = subjectEntity.Id;
+                                db.Questions.Add(q);
+                            }
+                            
+                            db.SaveChanges();
+
+                            await botClient.SendMessage(chatId, $"Магія відбулася! {questions.Count} нових питань з '{subject}' успішно додано до бази даних.", cancellationToken: cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            await botClient.SendMessage(chatId, $"Помилка парсингу або збереження: {ex.Message}\n\nОсь що повернув ШІ:\n{jsonResult ?? "null"}", cancellationToken: cancellationToken);
+                        }
+                    }
+                    else
+                    {
+                        await botClient.SendMessage(chatId, "Неправильний формат. Використовуй: /gen Назва_предмета Кількість (наприклад: /gen C# 5)", cancellationToken: cancellationToken);
+                    }
+                    return;
+                }
                 return;
             }
 
@@ -108,6 +204,38 @@ namespace QuizMaster
 
             await botClient.AnswerCallbackQuery(callbackQuery.Id, cancellationToken: cancellationToken);
 
+            if (callbackData.StartsWith("ans_"))
+            {
+                string selectedOption = callbackData.Split('_')[1]; 
+                
+                using var db = new AppDbContext();
+                var testLogic = new Services.TestLogicService(db);
+                
+                try
+                {
+                    bool isCorrect = await testLogic.ProcessAnswerAsync(chatId, selectedOption);
+                    string feedback = isCorrect ? "Правильно!" : "Неправильно!";
+                    await botClient.SendMessage(chatId, feedback, cancellationToken: cancellationToken);
+                    
+                    var nextQuestion = await testLogic.GetCurrentQuestionAsync(chatId);
+                    if (nextQuestion != null)
+                    {
+                        await SendCurrentQuestionAsync(botClient, chatId, testLogic, cancellationToken);
+                    }
+                    else
+                    {
+                        string result = testLogic.FinishTest(chatId);
+                        await botClient.SendMessage(chatId, result, cancellationToken: cancellationToken);
+                        await Handlers.MenuHandler.SendMainMenuAsync(botClient, chatId, cancellationToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await botClient.SendMessage(chatId, $"Сесію завершено або сталася помилка: {ex.Message}", cancellationToken: cancellationToken);
+                }
+                return;
+            }
+
             switch (callbackData)
             {
                 case "menu_main":
@@ -123,15 +251,83 @@ namespace QuizMaster
                     break;
                 
                 case "subject_math":
-                case "subject_csharp":
+                case "subject_prog_basics":
                 case "subject_networks":
-                    await botClient.SendMessage(chatId, $"Ти обрав предмет: {callbackData}. Запускаю алгоритм тестування...", cancellationToken: cancellationToken);
+                case "subject_algorithms":
+                    using (var db = new AppDbContext())
+                    {
+                        var testLogic = new Services.TestLogicService(db);
+                        
+                        string subjectName = ""; 
+                        if (callbackData == "subject_math")
+                        {
+                            subjectName = "Математичний аналіз";
+                        }
+                        if (callbackData == "subject_programming")
+                        {
+                            subjectName = "Основи програмування";
+                        }
+                        if (callbackData == "subject_networks")
+                        {
+                            subjectName = "Комп'ютерні мережі";
+                        }
+                        if (callbackData == "subject_algorithms")
+                        {
+                            subjectName = "Алгоритми та структури даних";
+                        }
+
+                        var subject = db.Subjects.ToList().FirstOrDefault(s => s.Name.ToLower() == subjectName.ToLower());
+                        
+                        if (subject == null)
+                        {
+                            await botClient.SendMessage(chatId, $"Предмет '{subjectName}' не знайдено. Спочатку згенеруй питання командою /gen!", cancellationToken: cancellationToken);
+                            break;
+                        }
+
+                        try
+                        {
+                            await botClient.SendMessage(chatId, $"Запускаю тест з предмету: {subjectName}...", cancellationToken: cancellationToken);
+                            
+                            await testLogic.StartNewTestAsync(chatId, subject.Id, 10, false);
+                            
+                            await SendCurrentQuestionAsync(botClient, chatId, testLogic, cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            await botClient.SendMessage(chatId, $"Не вдалося запустити тест: {ex.Message}", cancellationToken: cancellationToken);
+                        }
+                    }
                     break;
 
                 default:
                     await botClient.SendMessage(chatId, "Невідома команда.", cancellationToken: cancellationToken);
                     break;
             }
+        }
+
+        static async Task SendCurrentQuestionAsync(ITelegramBotClient botClient, long chatId, Services.TestLogicService testLogic, CancellationToken cancellationToken)
+        {
+            var question = await testLogic.GetCurrentQuestionAsync(chatId);
+            if (question == null) return;
+
+            string text = $"<b>{question.Text}</b>\n\n" +
+                        $"A) {question.OptionA}\n" +
+                        $"B) {question.OptionB}\n" +
+                        $"C) {question.OptionC}\n" +
+                        $"D) {question.OptionD}";
+
+            var inlineKeyboard = new Telegram.Bot.Types.ReplyMarkups.InlineKeyboardMarkup(new[]
+            {
+                new[]
+                {
+                    Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton.WithCallbackData("A", "ans_A"),
+                    Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton.WithCallbackData("B", "ans_B"),
+                    Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton.WithCallbackData("C", "ans_C"),
+                    Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton.WithCallbackData("D", "ans_D")
+                }
+            });
+
+            await botClient.SendMessage(chatId, text, Telegram.Bot.Types.Enums.ParseMode.Html, replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
         }
 
         static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
