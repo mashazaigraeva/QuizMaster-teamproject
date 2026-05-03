@@ -16,7 +16,8 @@ namespace QuizMaster.Handlers
             var keyboard = new InlineKeyboardMarkup(new[]
             {
                 new[] { InlineKeyboardButton.WithCallbackData("Вибрати дисципліну", "menu_subjects") },
-                new[]{ InlineKeyboardButton.WithCallbackData("Моя статистика", "menu_stats") }
+                new[]{ InlineKeyboardButton.WithCallbackData("Моя статистика", "menu_stats"), 
+                        InlineKeyboardButton.WithCallbackData("Налаштування", "menu_settings")}
             });
 
             await botClient.SendMessage(

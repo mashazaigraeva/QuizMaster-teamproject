@@ -213,8 +213,19 @@ namespace QuizMaster
                 
                 try
                 {
+                    var currentQuestion = await testLogic.GetCurrentQuestionAsync(chatId);
                     bool isCorrect = await testLogic.ProcessAnswerAsync(chatId, selectedOption);
-                    string feedback = isCorrect ? "Правильно!" : "Неправильно!";
+                    
+                    string feedback;
+                    if (isCorrect)
+                    {
+                        feedback = "Правильно!";
+                    }
+                    else
+                    {
+                        string safeExplanation = currentQuestion?.Explanation?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "Пояснення відсутнє.";
+                        feedback = $"Неправильно!\n\nПояснення: {safeExplanation}";
+                    }
                     await botClient.SendMessage(chatId, feedback, cancellationToken: cancellationToken);
                     
                     var nextQuestion = await testLogic.GetCurrentQuestionAsync(chatId);
@@ -224,14 +235,14 @@ namespace QuizMaster
                     }
                     else
                     {
-                        string result = testLogic.FinishTest(chatId);
+                        string result = await testLogic.FinishTestAsync(chatId);
                         await botClient.SendMessage(chatId, result, cancellationToken: cancellationToken);
                         await Handlers.MenuHandler.SendMainMenuAsync(botClient, chatId, cancellationToken);
                     }
                 }
                 catch (Exception ex)
                 {
-                    await botClient.SendMessage(chatId, $"Сесію завершено або сталася помилка: {ex.Message}", cancellationToken: cancellationToken);
+                    await botClient.SendMessage(chatId, $"Сесію завершено або сталася помилка:\n{ex.Message}", cancellationToken: cancellationToken);
                 }
                 return;
             }
@@ -247,7 +258,17 @@ namespace QuizMaster
                     break;
 
                 case "menu_stats":
-                    await botClient.SendMessage(chatId, "Тут буде виводитись твоя статистика успішності. (В розробці)", cancellationToken: cancellationToken);
+                    using (var db = new AppDbContext())
+                    {
+                        var statsService = new Services.StatisticsService(db);
+                        string report = await statsService.GetUserStatisticsAsync(chatId);
+                        
+                        await botClient.SendMessage(
+                            chatId: chatId, 
+                            text: report, 
+                            parseMode: Telegram.Bot.Types.Enums.ParseMode.Markdown,
+                            cancellationToken: cancellationToken);
+                    }
                     break;
                 
                 case "subject_math":
@@ -308,13 +329,22 @@ namespace QuizMaster
         static async Task SendCurrentQuestionAsync(ITelegramBotClient botClient, long chatId, Services.TestLogicService testLogic, CancellationToken cancellationToken)
         {
             var question = await testLogic.GetCurrentQuestionAsync(chatId);
-            if (question == null) return;
+            if (question == null)
+            {
+                return;
+            }
 
-            string text = $"<b>{question.Text}</b>\n\n" +
-                        $"A) {question.OptionA}\n" +
-                        $"B) {question.OptionB}\n" +
-                        $"C) {question.OptionC}\n" +
-                        $"D) {question.OptionD}";
+            string safeText = question.Text?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+            string safeA = question.OptionA?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+            string safeB = question.OptionB?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+            string safeC = question.OptionC?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+            string safeD = question.OptionD?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+
+            string text = $"<b>{safeText}</b>\n\n" +
+                        $"A) {safeA}\n" +
+                        $"B) {safeB}\n" +
+                        $"C) {safeC}\n" +
+                        $"D) {safeD}";
 
             var inlineKeyboard = new Telegram.Bot.Types.ReplyMarkups.InlineKeyboardMarkup(new[]
             {

@@ -91,20 +91,59 @@ namespace QuizMaster.Services
             return isCorrect;
         }
 
-        public string FinishTest(long telegramId)
+        public async Task<string> FinishTestAsync(long telegramId)
         {
             if (!ActiveSessions.TryGetValue(telegramId, out var session))
             {
                 return "Помилка: результати не знайдено.";
             }
-                
+
             int total = session.TicketQuestionIds.Count;
             int correct = session.CorrectAnswersCount;
-            double percentage = (double)correct / total * 100;
+            double percentage = total > 0 ? (double)correct / total * 100 : 0;
+
+            var resultRecord = new ExamResult
+            {
+                TelegramId = session.TelegramId,
+                SubjectId = session.SubjectId,
+                TotalQuestions = total,
+                CorrectAnswers = correct
+            };
+
+            _context.ExamResult.Add(resultRecord);
+
+            List<User> allUsers = _context.Users.ToList();
+            User currentUser = null;
+            foreach (User u in allUsers)
+            {
+                if (u.TelegramId == telegramId)
+                {
+                    currentUser = u;
+                    break;
+                }
+            }
+
+            if (currentUser != null)
+            {
+                currentUser.TotalAnswers = currentUser.TotalAnswers + total;
+                currentUser.CorrectAnswers = currentUser.CorrectAnswers + correct;
+                
+                _context.Users.Update(currentUser);
+            }
+
+            await _context.SaveChangesAsync();
 
             ActiveSessions.Remove(telegramId);
 
-            return $"Тест завершено!\nТвій результат: {correct} з {total} правильних відповідей ({Math.Round(percentage)}%).";
+            return $"🏁 Тест завершено!\nТвій результат: {correct} з {total} правильних відповідей ({Math.Round(percentage, 1)}%).\nДані збережено в твій профіль!";
+        }
+
+        public void StopSession(long telegramId)
+        {
+            if (ActiveSessions.ContainsKey(telegramId))
+            {
+                ActiveSessions.Remove(telegramId);
+            }
         }
     }
 }
