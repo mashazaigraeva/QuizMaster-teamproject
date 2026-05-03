@@ -16,8 +16,7 @@ namespace QuizMaster.Handlers
             var keyboard = new InlineKeyboardMarkup(new[]
             {
                 new[] { InlineKeyboardButton.WithCallbackData("Вибрати дисципліну", "menu_subjects") },
-                new[]{ InlineKeyboardButton.WithCallbackData("Моя статистика", "menu_stats"), 
-                        InlineKeyboardButton.WithCallbackData("Налаштування", "menu_settings")}
+                new[]{ InlineKeyboardButton.WithCallbackData("Моя статистика", "menu_stats") }
             });
 
             await botClient.SendMessage(
@@ -46,6 +45,41 @@ namespace QuizMaster.Handlers
                 "Обери предмет:",
                 replyMarkup: keyboard,
                 cancellationToken: ct);
+        }
+
+        public static async Task SendCurrentQuestionAsync(
+            ITelegramBotClient botClient, 
+            long chatId, 
+            Services.TestLogicService testLogic, 
+            CancellationToken cancellationToken)
+        {
+            var question = await testLogic.GetCurrentQuestionAsync(chatId);
+            if (question == null) return;
+
+            string safeText = question.Text?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+            string safeA = question.OptionA?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+            string safeB = question.OptionB?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+            string safeC = question.OptionC?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+            string safeD = question.OptionD?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+
+            string text = $"<b>{safeText}</b>\n\n" +
+                          $"A) {safeA}\n" +
+                          $"B) {safeB}\n" +
+                          $"C) {safeC}\n" +
+                          $"D) {safeD}";
+
+            var inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("A", "ans_A"),
+                    InlineKeyboardButton.WithCallbackData("B", "ans_B"),
+                    InlineKeyboardButton.WithCallbackData("C", "ans_C"),
+                    InlineKeyboardButton.WithCallbackData("D", "ans_D")
+                }
+            });
+
+            await botClient.SendMessage(chatId, text, ParseMode.Html, replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
         }
     }
 }
