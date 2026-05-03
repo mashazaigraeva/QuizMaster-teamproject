@@ -21,6 +21,7 @@ namespace QuizMaster.Services
             var requestUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={apiKey}";
 
             var prompt = $"Згенеруй {count} тестових питань з дисципліни '{subject}'. " +
+                        "ВАЖЛИВО: Усі питання, варіанти відповідей та пояснення мають бути написані ВИКЛЮЧНО УКРАЇНСЬКОЮ МОВОЮ! " +
                         "Поверни ВИКЛЮЧНО валідний масив JSON об'єктів. Без форматування ```json, без вступу чи висновків. " +
                         "Кожен об'єкт повинен мати такі поля (англійською): " +
                         "Text, OptionA, OptionB, OptionC, OptionD, CorrectOption (лише буква: A, B, C або D), Explanation. " +
@@ -56,6 +57,50 @@ namespace QuizMaster.Services
             {
                 Console.WriteLine($"[Помилка Мережі] {ex.Message}");
                 return null;
+            }
+        }
+
+        public async Task<string> AskTutorAsync(string studentQuestion)
+        {
+            string systemPrompt = "Ти розумний і доброзичливий викладач університету. " +
+                                "Дай коротку, зрозумілу і точну відповідь студенту на його запитання. " +
+                                "ВАЖЛИВО: Не використовуй розмітку Markdown (зірочки **, решітки #) та HTML. Пиши звичайним чистим текстом.";
+
+            string fullPrompt = $"{systemPrompt}\n\nЗапитання студента: {studentQuestion}";
+
+            var requestBody = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        parts = new[] { new { text = fullPrompt } }
+                    }
+                }
+            };
+
+            string jsonPayload = System.Text.Json.JsonSerializer.Serialize(requestBody);
+            var content = new StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
+
+            string apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+            string requestUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={apiKey}";
+            HttpResponseMessage response = await _httpClient.PostAsync(requestUrl, content);
+
+            response.EnsureSuccessStatusCode();
+
+            string responseJson = await response.Content.ReadAsStringAsync();
+
+            using (var document = System.Text.Json.JsonDocument.Parse(responseJson))
+            {
+                var root = document.RootElement;
+                var answer = root
+                    .GetProperty("candidates")[0]
+                    .GetProperty("content")
+                    .GetProperty("parts")[0]
+                    .GetProperty("text")
+                    .GetString();
+
+                return answer ?? "Вибач, я не зміг сформулювати відповідь.";
             }
         }
     }

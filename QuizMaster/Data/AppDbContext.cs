@@ -9,6 +9,7 @@ namespace QuizMaster.Data
         public DbSet<Subject> Subjects { get; set; }
         public DbSet<Question> Questions { get; set; }
         public DbSet<ExamResult> ExamResults { get; set; } 
+        public DbSet<ExamResult> ExamResult { get; set; }
 
         public AppDbContext()
         {
