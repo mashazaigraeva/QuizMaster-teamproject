@@ -31,11 +31,11 @@ namespace QuizMaster.Handlers
                         db.Users.Add(user);
                         db.SaveChanges();
                         
-                        await botClient.SendMessage(chatId, "Привіт! Я успішно зареєстрував тебе в базі. Готовий до тестів?", cancellationToken: cancellationToken);
+                        await botClient.SendMessage(chatId, "👋 Привіт! Я успішно зареєстрував тебе в базі. Готовий до тестів?", cancellationToken: cancellationToken);
                     }
                     else
                     {
-                        await botClient.SendMessage(chatId, $"З поверненням, {user.Username ?? "студенте"}! Продовжимо навчання?", cancellationToken: cancellationToken);
+                        await botClient.SendMessage(chatId, $"👋 З поверненням, {user.Username ?? "студенте"}! Продовжимо навчання?", cancellationToken: cancellationToken);
                     }
                 }
                 await MenuHandler.SendMainMenuAsync(botClient, chatId, cancellationToken);
@@ -55,11 +55,11 @@ namespace QuizMaster.Handlers
                 if (string.IsNullOrEmpty(userQuestion))
                 {
                     waitingForAsk[chatId] = true; 
-                    await botClient.SendMessage(chatId, "Що саме тебе цікавить?\nНапиши своє запитання прямо сюди (наступним повідомленням), і я передам його ШІ!", parseMode: Telegram.Bot.Types.Enums.ParseMode.Html, cancellationToken: cancellationToken);
+                    await botClient.SendMessage(chatId, "✍️ Що саме тебе цікавить?\nНапиши своє запитання прямо сюди (наступним повідомленням), і я передам його ШІ!", parseMode: Telegram.Bot.Types.Enums.ParseMode.Html, cancellationToken: cancellationToken);
                     return;
                 }
 
-                await botClient.SendMessage(chatId, "Gemini аналізує питання...", parseMode: Telegram.Bot.Types.Enums.ParseMode.Html, cancellationToken: cancellationToken);
+                await botClient.SendMessage(chatId, "🧠 Gemini аналізує питання...", parseMode: Telegram.Bot.Types.Enums.ParseMode.Html, cancellationToken: cancellationToken);
 
                 try
                 {
@@ -69,7 +69,7 @@ namespace QuizMaster.Handlers
                 }
                 catch (Exception ex)
                 {
-                    await botClient.SendMessage(chatId, $"ШІ тимчасово недоступний. Спробуй пізніше.\n({ex.Message})", cancellationToken: cancellationToken);
+                    await botClient.SendMessage(chatId, $"⚠️ ШІ тимчасово недоступний. Спробуй пізніше.\n({ex.Message})", cancellationToken: cancellationToken);
                 }
                 return;
             }
@@ -81,7 +81,7 @@ namespace QuizMaster.Handlers
                     var testLogic = new TestLogicService(db);
                     testLogic.StopSession(chatId);
                 }
-                await botClient.SendMessage(chatId, "На сьогодні з підготовкою все. Пиши /start коли будеш готовий повернутися!", cancellationToken: cancellationToken);
+                await botClient.SendMessage(chatId, "👋 На сьогодні з підготовкою все. Пиши /start коли будеш готовий повернутися!", cancellationToken: cancellationToken);
                 return;
             }
 
@@ -93,7 +93,7 @@ namespace QuizMaster.Handlers
                 var adminIds = adminIdString.Split(',').Select(id => id.Trim()).ToList();
                 if (!adminIds.Contains(chatId.ToString()))
                 {
-                    await botClient.SendMessage(chatId, "У вас немає прав для генерації питань.", cancellationToken: cancellationToken);
+                    await botClient.SendMessage(chatId, "⛔ У вас немає прав для генерації питань.", cancellationToken: cancellationToken);
                     return;
                 }
 
@@ -101,7 +101,7 @@ namespace QuizMaster.Handlers
                 if (parts.Length >= 3 && int.TryParse(parts.Last(), out int count))
                 {
                     string subject = string.Join(" ", parts.Skip(1).Take(parts.Length - 2));
-                    await botClient.SendMessage(chatId, $"Gemini думає... Генерую {count} питань з '{subject}'. Це займе кілька секунд.", cancellationToken: cancellationToken);
+                    await botClient.SendMessage(chatId, $"⏳ Gemini думає... Генерую {count} питань з '{subject}'. Це займе кілька секунд.", cancellationToken: cancellationToken);
                     
                     try
                     {
@@ -132,24 +132,24 @@ namespace QuizMaster.Handlers
                                 db.Questions.Add(q);
                             }
                             db.SaveChanges();
-                            await botClient.SendMessage(chatId, $"Магія відбулася! {questions.Count} нових питань з '{subject}' успішно додано до бази даних.", cancellationToken: cancellationToken);
+                            await botClient.SendMessage(chatId, $"✨ Магія відбулася! {questions.Count} нових питань з '{subject}' успішно додано до бази даних. 🎉", cancellationToken: cancellationToken);
                         }
                     }
                     catch (Exception ex)
                     {
-                        await botClient.SendMessage(chatId, $"Помилка: {ex.Message}", cancellationToken: cancellationToken);
+                        await botClient.SendMessage(chatId, $"❌ Помилка: {ex.Message}", cancellationToken: cancellationToken);
                     }
                 }
                 else
                 {
-                    await botClient.SendMessage(chatId, "Неправильний формат. Використовуй: /gen Назва_предмета Кількість (наприклад: /gen C# 5)", cancellationToken: cancellationToken);
-                }
+                    await botClient.SendMessage(chatId, "⚠️ Неправильний формат. Використовуй: /gen Назва_предмета Кількість (наприклад: /gen C# 5)", cancellationToken: cancellationToken);
                 return;
+                }
             }
 
             if (messageText.StartsWith("/"))
             {
-                await botClient.SendMessage(chatId, "На жаль, я не розумію такої команди.\n\nНапиши /start, щоб відкрити головне меню, або скористайся кнопкою «Налаштування»!", cancellationToken: cancellationToken);
+                await botClient.SendMessage(chatId, "⚠️ На жаль, я не розумію такої команди.\n\nНапиши /start, щоб відкрити головне меню, або скористайся кнопкою «Налаштування»!", cancellationToken: cancellationToken);
             }
         }
     }

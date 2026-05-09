@@ -27,7 +27,7 @@ namespace QuizMaster.Services
 
             if (allQuestions.Count < questionsCount)
             {
-                throw new Exception($"Недостатньо питань. Є: {allQuestions.Count}, потрібно: {questionsCount}");
+                throw new Exception($"⚠️ Недостатньо питань. Є: {allQuestions.Count}, потрібно: {questionsCount}");
             }
 
             var randomizedTicketIds = allQuestions
@@ -71,7 +71,7 @@ namespace QuizMaster.Services
         {
             if (!ActiveSessions.TryGetValue(telegramId, out var session))
             {
-                throw new Exception("Сесію не знайдено.");
+                throw new Exception("❌ Сесію не знайдено.");
             }
                 
             var currentQuestion = await GetCurrentQuestionAsync(telegramId);
@@ -95,7 +95,7 @@ namespace QuizMaster.Services
         {
             if (!ActiveSessions.TryGetValue(telegramId, out var session))
             {
-                return "Помилка: результати не знайдено.";
+                return "⚠️ Помилка: результати не знайдено.";
             }
 
             int total = session.TicketQuestionIds.Count;
