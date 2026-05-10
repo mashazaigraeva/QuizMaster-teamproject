@@ -30,11 +30,11 @@ namespace QuizMaster.Handlers
                     var currentQuestion = await testLogic.GetCurrentQuestionAsync(chatId);
                     bool isCorrect = await testLogic.ProcessAnswerAsync(chatId, selectedOption);
                     
-                    string feedback = "Правильно!";
+                    string feedback = "✅ Правильно!";
                     if (!isCorrect)
                     {
                         string safeExplanation = currentQuestion?.Explanation?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "Пояснення відсутнє.";
-                        feedback = $"Неправильно!\n\nПояснення: {safeExplanation}";
+                        feedback = $"❌ Неправильно!\n\n💡 Пояснення: {safeExplanation}";
                     }
                     await botClient.SendMessage(chatId, feedback, cancellationToken: cancellationToken);
                     
@@ -52,7 +52,7 @@ namespace QuizMaster.Handlers
                 }
                 catch (Exception ex)
                 {
-                    await botClient.SendMessage(chatId, $"Сесію завершено або сталася помилка:\n{ex.Message}", cancellationToken: cancellationToken);
+                    await botClient.SendMessage(chatId, $"🏁 Сесію завершено або сталася помилка:\n{ex.Message}", cancellationToken: cancellationToken);
                 }
                 return;
             }
@@ -92,27 +92,27 @@ namespace QuizMaster.Handlers
                         var subject = db.Subjects.ToList().FirstOrDefault(s => s.Name.ToLower() == subjectName.ToLower());
                         if (subject == null)
                         {
-                            await botClient.SendMessage(chatId, $"Предмет '{subjectName}' не знайдено. Згенеруйте питання!", cancellationToken: cancellationToken);
+                            await botClient.SendMessage(chatId, $"⚠️ Предмет '{subjectName}' не знайдено. Згенеруйте питання!", cancellationToken: cancellationToken);
                             break;
                         }
 
                         try
                         {
-                            await botClient.SendMessage(chatId, $"Запускаю тест з предмету: {subjectName}...", cancellationToken: cancellationToken);
+                            await botClient.SendMessage(chatId, $"🚀 Запускаю тест з предмету: {subjectName}...", cancellationToken: cancellationToken);
                             await testLogic.StartNewTestAsync(chatId, subject.Id, 10, false);
                             await MenuHandler.SendCurrentQuestionAsync(botClient, chatId, testLogic, cancellationToken);
                         }
                         catch (Exception ex)
                         {
-                            await botClient.SendMessage(chatId, $"Не вдалося запустити тест: {ex.Message}", cancellationToken: cancellationToken);
+                            await botClient.SendMessage(chatId, $"❌ Не вдалося запустити тест: {ex.Message}", cancellationToken: cancellationToken);
                         }
                     }
                     break;
 
                 case "menu_settings":
-                    string helpText = "<b>Довідка та Налаштування</b>\n\n" +
-                                      "Я — твій розумний ШІ-помічник для підготовки до іспитів.\n\n" +
-                                      "Основні команди:\n" +
+                    string helpText = "⚙️ <b>Довідка та Налаштування</b>\n\n" +
+                                      "Я — твій розумний ШІ-помічник для підготовки до іспитів. 🎓\n\n" +
+                                      "📌 Основні команди:\n" +
                                       "🔹 /start — Головне меню\n" +
                                       "🔹 /ask [питання] — Запитати ШІ-репетитора\n" +
                                       "🔹 /quit — Завершити поточний тест\n\n" +

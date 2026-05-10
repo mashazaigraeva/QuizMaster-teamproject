@@ -25,7 +25,7 @@ namespace QuizMaster.Services
 
             if (!userResults.Any())
             {
-                return "У тебе ще немає пройдених тестів. Час це виправити!";
+                return "📈 У тебе ще немає пройдених тестів. Час це виправити!";
             }
 
             int totalTestsTaken = userResults.Count;
@@ -37,9 +37,9 @@ namespace QuizMaster.Services
                 : 0;
 
             var report = new StringBuilder();
-            report.AppendLine("**Твоя персональна статистика:**");
-            report.AppendLine($"Всього пройдено тестів: {totalTestsTaken}");
-            report.AppendLine($"Загальна точність: {Math.Round(overallAccuracy, 1)}%\n");
+            report.AppendLine("📊 **Твоя персональна статистика:**");
+            report.AppendLine($"📝 Всього пройдено тестів: {totalTestsTaken}");
+            report.AppendLine($"🎯 Загальна точність: {Math.Round(overallAccuracy, 1)}%\n");
 
             var subjectStats = userResults
                 .GroupBy(tr => tr.Subject.Name)
@@ -54,7 +54,7 @@ namespace QuizMaster.Services
                 })
                 .ToList();
 
-            report.AppendLine("**Успішність за дисциплінами:**");
+            report.AppendLine("📚 **Успішність за дисциплінами:**");
             foreach (var stat in subjectStats)
             {
                 report.AppendLine($"- {stat.SubjectName}: {Math.Round(stat.Accuracy, 1)}% ({stat.CorrectQ}/{stat.TotalQ})");
@@ -63,8 +63,8 @@ namespace QuizMaster.Services
             var weakestSubject = subjectStats.OrderBy(s => s.Accuracy).FirstOrDefault();
             if (weakestSubject != null)
             {
-                report.AppendLine($"\n**Твоє слабке місце:** {weakestSubject.SubjectName}.");
-                report.AppendLine("Рекомендуємо приділити більше уваги цій темі під час наступних тренувань!");
+                report.AppendLine($"\n⚠️ **Твоє слабке місце:** {weakestSubject.SubjectName}.");
+                report.AppendLine("💡 Рекомендуємо приділити більше уваги цій темі під час наступних тренувань!");
             }
 
             return report.ToString();
